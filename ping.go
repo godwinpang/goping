@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -55,6 +57,20 @@ func (p *Pinger) StartPing() {
 		}
 	}
 
+}
+
+func (p *Pinger) AddSigtermHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		p.printStatistics()
+		os.Exit(0)
+	}()
+}
+
+func (p *Pinger) printStatistics() {
+	fmt.Printf("\n--- %s ping statistics ---\n", p.hostname)
 }
 
 func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {

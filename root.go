@@ -32,6 +32,7 @@ var pingCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		addr := args[0]
 		pinger, _ := NewPinger(addr)
+		pinger.AddSigtermHandler()
 		pinger.StartPing()
 	},
 }
