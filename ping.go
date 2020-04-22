@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -49,16 +50,29 @@ func (p *Pinger) StartPing() {
 	for {
 		select {
 		case <-interval.C:
-			p.ping(connection)
+			p.pingWithTimeout(connection)
 		}
 	}
 
 }
 
-func (p *Pinger) ping(conn *icmp.PacketConn) error {
-	// ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(PingTimeout))
-	// defer cancel()
+func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
+	resultChan := make(chan bool)
+	go p.ping(conn, resultChan)
+
+	select {
+	case <-resultChan:
+		return
+	case <-ctx.Done():
+		fmt.Printf("Request timeout for icmp_seq %d\n", p.seqNum)
+	}
+
+}
+
+func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 	sendTime := time.Now()
 
 	p.seqNum++
@@ -69,12 +83,14 @@ func (p *Pinger) ping(conn *icmp.PacketConn) error {
 	if err != nil {
 		return err
 	}
+	resultChan <- true
 
 	recvTime := time.Now()
 
 	readBuf = readBuf[:numBytes]
 
 	rtt := recvTime.Sub(sendTime).Milliseconds()
+
 	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%d ms\n", numBytes, p.ipAddr, p.seqNum, rtt)
 
 	return nil
