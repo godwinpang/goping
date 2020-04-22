@@ -51,6 +51,7 @@ func (p *Pinger) StartPing() {
 		select {
 		case <-interval.C:
 			p.pingWithTimeout(connection)
+			p.seqNum++
 		}
 	}
 
@@ -75,7 +76,6 @@ func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {
 func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 	sendTime := time.Now()
 
-	p.seqNum++
 	err := p.sendICMP(conn, p.seqNum)
 
 	readBuf := make([]byte, 1500)
