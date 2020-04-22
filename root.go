@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package main
 
 import (
 	"fmt"
@@ -30,7 +30,9 @@ var pingCmd = &cobra.Command{
 	Long:  "goping supports pinging hostnames or ip addresses.",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(args[0])
+		addr := args[0]
+		pinger, _ := NewPinger(addr)
+		pinger.StartPing()
 	},
 }
 

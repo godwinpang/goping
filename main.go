@@ -15,8 +15,6 @@ limitations under the License.
 */
 package main
 
-import "goping/cmd"
-
 func main() {
-	cmd.Execute()
+	Execute()
 }
