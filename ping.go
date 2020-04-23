@@ -14,6 +14,7 @@ import (
 )
 
 const PingTimeout = time.Second
+const DataLen = 56
 
 type Pinger struct {
 	hostname string
@@ -38,7 +39,7 @@ func NewPinger(addr string) (*Pinger, error) {
 }
 
 func (p *Pinger) StartPing() {
-	fmt.Printf("PING %s (%s): 0 data bytes\n", p.hostname, p.ipAddr)
+	fmt.Printf("PING %s (%s): 56 data bytes\n", p.hostname, p.ipAddr)
 	connection, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
 		fmt.Println(err)
@@ -74,7 +75,7 @@ func (p *Pinger) printStatistics() {
 }
 
 func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), PingTimeout)
 	defer cancel()
 
 	resultChan := make(chan bool)
@@ -116,10 +117,15 @@ func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 // Sends ICMP echo packet and returns seqNum.
 func (p *Pinger) sendICMP(conn *icmp.PacketConn, seqNum int) error {
 
+	data := make([]byte, DataLen)
+	for idx, _ := range data {
+		data[idx] = '0'
+	}
+
 	icmpBody := &icmp.Echo{
 		ID:   os.Getpid(),
 		Seq:  seqNum,
-		Data: []byte(""),
+		Data: data,
 	}
 
 	icmpMsg := icmp.Message{
