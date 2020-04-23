@@ -105,9 +105,10 @@ func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 
 	readBuf = readBuf[:numBytes]
 
-	rtt := recvTime.Sub(sendTime).Milliseconds()
+	var rtt float32
+	rtt = float32(recvTime.Sub(sendTime).Microseconds()) / 1000
 
-	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%d ms\n", numBytes, p.ipAddr, p.seqNum, rtt)
+	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%.3f ms\n", numBytes, p.ipAddr, p.seqNum, rtt)
 
 	return nil
 }
