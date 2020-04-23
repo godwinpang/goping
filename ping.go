@@ -21,6 +21,8 @@ type Pinger struct {
 	ipAddr   *net.IPAddr
 	icmpID   int
 	seqNum   int
+
+	statistics map[int]float32
 }
 
 func NewPinger(addr string) (*Pinger, error) {
@@ -31,10 +33,11 @@ func NewPinger(addr string) (*Pinger, error) {
 	}
 
 	return &Pinger{
-		hostname: addr,
-		ipAddr:   ipAddr,
-		icmpID:   os.Getpid(),
-		seqNum:   0,
+		hostname:   addr,
+		ipAddr:     ipAddr,
+		icmpID:     os.Getpid(),
+		seqNum:     0,
+		statistics: make(map[int]float32),
 	}, nil
 }
 
@@ -53,6 +56,7 @@ func (p *Pinger) StartPing() {
 	for {
 		select {
 		case <-interval.C:
+			p.statistics[p.seqNum] = -1
 			p.pingWithTimeout(connection)
 			p.seqNum++
 		}
@@ -72,6 +76,35 @@ func (p *Pinger) AddSigtermHandler() {
 
 func (p *Pinger) printStatistics() {
 	fmt.Printf("\n--- %s ping statistics ---\n", p.hostname)
+	numPacketsSent := len(p.statistics)
+	numPacketsRecv := len(p.statistics)
+	// RTT must be <1000 ms since we have a timeout of 1 second
+	var minRTT float32 = 1000.0
+	var maxRTT float32 = 0.0
+	var sumRTT float32 = 0.0
+	for _, rtt := range p.statistics {
+		if rtt == -1 {
+			numPacketsRecv--
+			continue
+		}
+		if rtt < minRTT {
+			minRTT = rtt
+		}
+		if rtt > maxRTT {
+			maxRTT = rtt
+		}
+		sumRTT += rtt
+	}
+
+	pktLoss := float32(numPacketsSent-numPacketsRecv) / float32(numPacketsSent)
+
+	fmt.Printf("%d packets transmitted, %d packets received, %.1f packet loss\n", numPacketsSent, numPacketsRecv, pktLoss)
+	if numPacketsRecv == 0 {
+		return
+	}
+
+	fmt.Printf("round-trip min/avg/max = %.3f/%.3f/%.3f ms\n", minRTT, sumRTT/float32(numPacketsRecv), maxRTT)
+
 }
 
 func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {
@@ -108,6 +141,7 @@ func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 
 	var rtt float32
 	rtt = float32(recvTime.Sub(sendTime).Microseconds()) / 1000
+	p.statistics[p.seqNum] = rtt
 
 	fmt.Printf("%d bytes from %s: icmp_seq=%d time=%.3f ms\n", numBytes, p.ipAddr, p.seqNum, rtt)
 
