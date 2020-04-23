@@ -41,6 +41,7 @@ func NewPinger(addr string) (*Pinger, error) {
 	}, nil
 }
 
+// Uses time.Ticker to start off a new ping every second.
 func (p *Pinger) StartPing() {
 	fmt.Printf("PING %s (%s): 56 data bytes\n", p.hostname, p.ipAddr)
 	connection, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -107,6 +108,7 @@ func (p *Pinger) printStatistics() {
 
 }
 
+// Uses context.WithTimeout to implement timeout.
 func (p *Pinger) pingWithTimeout(conn *icmp.PacketConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), PingTimeout)
 	defer cancel()
@@ -148,7 +150,7 @@ func (p *Pinger) ping(conn *icmp.PacketConn, resultChan chan bool) error {
 	return nil
 }
 
-// Sends ICMP echo packet and returns seqNum.
+// Sends ICMP echo packet.
 func (p *Pinger) sendICMP(conn *icmp.PacketConn, seqNum int) error {
 
 	data := make([]byte, DataLen)
